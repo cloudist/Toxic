@@ -1,4 +1,5 @@
 # Toxic
+[![Gem Version](https://badge.fury.io/rb/toxic.svg)](https://badge.fury.io/rb/toxic)
 
 create xcode project from template
 
