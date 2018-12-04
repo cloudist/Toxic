@@ -29,6 +29,7 @@ module Toxic
         raise "A name for the project is required." unless name
         raise "The project name cannot contain spaces." if name =~ /\s/
         raise "The project name cannot begin with a '.'" if name[0, 1] == '.'
+        puts CLI::UI.fmt("{{green: validate! pass")
       end
 
       def clone_template
@@ -43,12 +44,15 @@ module Toxic
           end
         end
         system "git clone #{@template_url} #{name}"
+
+        puts CLI::UI.fmt("{{green: clone_template pass")
       end
 
       def get_template_info
-        template_path = Dir.glob("./#{name}/*.xcodeproj").first
+        template_path = Dir.glob("./#{name}/**/**/*.xcodeproj").first
         @template_name = File.basename(template_path, '.xcodeproj')
         @template_author, @template_organization = template_author_organization
+        puts CLI::UI.fmt("{{green: get_template_info pass")
       end
 
       def ask_info_for_new
@@ -57,6 +61,8 @@ module Toxic
         @author = CLI::UI.ask('author for the project:')
         @organization = CLI::UI.ask('organization for the project:')
         @repository_address = CLI::UI.ask('repository address for the project:')
+
+        puts CLI::UI.fmt("{{green: ask_info_for_new pass")
       end
 
       def remove_useless
@@ -64,15 +70,19 @@ module Toxic
         system "rm -rf ./#{name}/**/xcuserdata/"
         system "rm -rf ./#{name}/**/**/xcuserdata/"
         system "rm -rf ./#{name}/**/**/xcshareddata"
+        puts CLI::UI.fmt("{{green: remove_useless pass")
       end
 
       def configure_template
         traverse_dir(Pathname("./#{name}"))
+        puts CLI::UI.fmt("{{green: configure_template pass")
       end
 
       def set_bundle_identifiers
         puts CLI::UI.fmt("{{cyan: Let's setup your bundle identifiers}}")
-        project = Xcodeproj::Project.open("./#{name}/#{name}.xcodeproj")
+
+        project_path = Dir.glob("./#{name}/**/**/#{name}.xcodeproj").first
+        project = Xcodeproj::Project.open(project_path)
         project.targets.each do |target|
           target.build_configurations.each do |config|
             original_bundle_identifier = config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"]
@@ -89,8 +99,8 @@ module Toxic
           puts CLI::UI.fmt("{{green: initializing git}}")
           system "git init"
           system "git remote add origin #{repository_address}" unless repository_address.empty?
-          project = "./#{name}.xcworkspace"
-          project = "./#{name}.xcodeproj" unless Dir.glob(project).any?
+          project = Dir.glob("./#{name}/**/**/#{name}.xcworkspace").first
+          project = Dir.glob("./#{name}/**/**/#{name}.xcodeproj") unless Dir.glob(project).any?
           system "open #{project}"
         end
       end
