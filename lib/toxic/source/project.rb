@@ -8,6 +8,7 @@ module Toxic
 
       attr_accessor :name, :template_url, :author, :organization, :repository_address
       attr_accessor :template_name, :template_author, :template_organization
+      attr_accessor :template_name_other
 
       def initialize(name, template_url)
         @name = name
@@ -51,6 +52,7 @@ module Toxic
       def get_template_info
         template_path = Dir.glob("./#{name}/**/**/*.xcodeproj").first
         @template_name = File.basename(template_path, '.xcodeproj')
+        @template_name_other = template_name.gsub(/[^a-zA-Z0-9]/, '_')
         @template_author, @template_organization = template_author_organization
       end
 
@@ -125,8 +127,9 @@ module Toxic
       end
 
       def traverse_dir(file_path)
+        file_path = rename(file_path)
         if File.directory?(file_path)
-          file_path = rename(file_path)
+
           Dir.each_child(file_path) do |file|
             traverse_dir(file_path + file)
           end
@@ -163,6 +166,7 @@ module Toxic
 
       def rename(original_name)
         name_new = original_name.sub(Regexp.new(Regexp.escape(template_name), Regexp::IGNORECASE), name)
+        name_new = name_new.sub(Regexp.new(Regexp.escape(template_name_other), Regexp::IGNORECASE), name)
         File.rename(original_name, name_new)
         name_new
       end
@@ -177,10 +181,10 @@ module Toxic
           origin.each do |line|
             line = "//  Created by #{author} on #{Date.today}." if /^\/\/ {2}Created by/ =~ line
             line = "//  Copyright © 2018 #{organization}. All rights reserved." if /^\/\/ {2}Copyright ©/ =~ line
-            line.gsub!(template_name, name)
-            # line.gsub!(Regexp.new(Regexp.escape(template_name), Regexp::IGNORECASE), name)
-            # line.gsub!(Regexp.new(Regexp.escape(template_organization), Regexp::IGNORECASE), organization)
-            # line.gsub!(Regexp.new(Regexp.escape(template_author), Regexp::IGNORECASE), author)
+            line.gsub!(Regexp.new(Regexp.escape(template_name), Regexp::IGNORECASE), name)
+            line.gsub!(Regexp.new(Regexp.escape(template_name_other), Regexp::IGNORECASE), name)
+            line.gsub!(Regexp.new(Regexp.escape(template_organization), Regexp::IGNORECASE), organization)
+            line.gsub!(Regexp.new(Regexp.escape(template_author), Regexp::IGNORECASE), author)
             file.puts line
           end
           origin.close
@@ -189,9 +193,8 @@ module Toxic
           File.rename("#{file_path}_new", file_path)
 
         rescue Exception
-# ignored
+          # ignored
         end
-        rename(file_path)
       end
     end
   end
