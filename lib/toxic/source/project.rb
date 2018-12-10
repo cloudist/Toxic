@@ -33,6 +33,7 @@ module Toxic
         raise "A name for the project is required." unless name
         raise "The project name cannot contain spaces." if name =~ /\s/
         raise "The project name cannot begin with a '.'" if name[0, 1] == '.'
+        raise "" if name =~ /[^a-zA-Z0-9]/
       end
 
       def clone_template
@@ -91,9 +92,9 @@ module Toxic
 
       def add_git_repository
         Dir.chdir("#{name}") do |_|
-          puts CLI::UI.fmt("{{green: initializing git}}")
-          @repository_address = CLI::UI.ask('repository address for the project:')
-          system "git init"
+          system "git init > /dev/null"
+          puts CLI::UI.fmt("{{green: Initialized empty Git repository}}")
+          @repository_address = CLI::UI.ask('repository address for the project:(enter to skip)')
           system "git remote add origin #{repository_address}" unless repository_address.empty?
         end
       end
@@ -112,9 +113,9 @@ module Toxic
       end
 
       def add_fastlane
+        return nil unless system "which fastlane > /dev/null"
         decision = CLI::UI.ask("do you want to add fastlane to your project? (y/n)", default: 'y')
-        nil unless decision == 'y'
-        system "sudo gem install fastlane -NV" unless `which fastlane`
+        return nil unless decision == 'y'
         Dir.chdir("#{name}") do |_|
           system "fastlane init"
         end
@@ -127,9 +128,9 @@ module Toxic
       end
 
       def traverse_dir(file_path)
+        puts "updating #{file_path}"
         file_path = rename(file_path)
         if File.directory?(file_path)
-
           Dir.each_child(file_path) do |file|
             traverse_dir(file_path + file)
           end
@@ -172,8 +173,6 @@ module Toxic
       end
 
       def update_content(file_path)
-        puts "updating #{file_path}"
-
         begin
 
           file = File.new("#{file_path}_new", "w+")
@@ -191,7 +190,6 @@ module Toxic
           file.close
           File.delete(origin)
           File.rename("#{file_path}_new", file_path)
-
         rescue Exception
           # ignored
         end
