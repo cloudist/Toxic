@@ -23,13 +23,15 @@ module Toxic
         configure_template
         set_bundle_identifiers
         add_git_repository
+        pod_install
+        add_fastlane
+        open_project
       end
 
       def validate!
         raise "A name for the project is required." unless name
         raise "The project name cannot contain spaces." if name =~ /\s/
         raise "The project name cannot begin with a '.'" if name[0, 1] == '.'
-        puts CLI::UI.fmt("{{green: validate! pass")
       end
 
       def clone_template
@@ -44,15 +46,12 @@ module Toxic
           end
         end
         system "git clone #{@template_url} #{name}"
-
-        puts CLI::UI.fmt("{{green: clone_template pass")
       end
 
       def get_template_info
         template_path = Dir.glob("./#{name}/**/**/*.xcodeproj").first
         @template_name = File.basename(template_path, '.xcodeproj')
         @template_author, @template_organization = template_author_organization
-        puts CLI::UI.fmt("{{green: get_template_info pass")
       end
 
       def ask_info_for_new
@@ -60,9 +59,6 @@ module Toxic
 
         @author = CLI::UI.ask('author for the project:')
         @organization = CLI::UI.ask('organization for the project:')
-        @repository_address = CLI::UI.ask('repository address for the project:')
-
-        puts CLI::UI.fmt("{{green: ask_info_for_new pass")
       end
 
       def remove_useless
@@ -70,17 +66,14 @@ module Toxic
         system "rm -rf ./#{name}/**/xcuserdata/"
         system "rm -rf ./#{name}/**/**/xcuserdata/"
         system "rm -rf ./#{name}/**/**/xcshareddata"
-        puts CLI::UI.fmt("{{green: remove_useless pass")
       end
 
       def configure_template
         traverse_dir(Pathname("./#{name}"))
-        puts CLI::UI.fmt("{{green: configure_template pass")
       end
 
       def set_bundle_identifiers
         puts CLI::UI.fmt("{{cyan: Let's setup your bundle identifiers}}")
-
         project_path = Dir.glob("./#{name}/**/**/#{name}.xcodeproj").first
         project = Xcodeproj::Project.open(project_path)
         project.targets.each do |target|
@@ -97,15 +90,38 @@ module Toxic
       def add_git_repository
         Dir.chdir("#{name}") do |_|
           puts CLI::UI.fmt("{{green: initializing git}}")
+          @repository_address = CLI::UI.ask('repository address for the project:')
           system "git init"
           system "git remote add origin #{repository_address}" unless repository_address.empty?
-          puts "repository_address: #{repository_address}"
-          project = Dir.glob("./**/**/#{name}.xcworkspace").first
-          puts "xcworkspace: #{project}"
-          project = Dir.glob("./**/**/#{name}.xcodeproj") unless Dir.glob(project).any?
-          puts "final: #{project}"
-          system "open #{project}"
         end
+      end
+
+      def pod_install
+        Dir.chdir("#{name}") do |_|
+          if File.exists?('Podfile')
+            decision = CLI::UI.ask("Podfile detected, do you want to exec 'pod install' ?", options: %w(install later))
+            case decision
+            when 'install'
+              system "pod install"
+            else break
+            end
+          end
+        end
+      end
+
+      def add_fastlane
+        decision = CLI::UI.ask("do you want to add fastlane to your project? (y/n)", default: 'y')
+        nil unless decision == 'y'
+        system "sudo gem install fastlane -NV" unless `which fastlane`
+        Dir.chdir("#{name}") do |_|
+          system "fastlane init"
+        end
+      end
+
+      def open_project
+        project = Dir.glob("./**/**/#{name}.xcworkspace").first
+        project = Dir.glob("./**/**/#{name}.xcodeproj") unless Dir.glob(project).any?
+        system "open #{project}"
       end
 
       def traverse_dir(file_path)
@@ -161,9 +177,10 @@ module Toxic
           origin.each do |line|
             line = "//  Created by #{author} on #{Date.today}." if /^\/\/ {2}Created by/ =~ line
             line = "//  Copyright © 2018 #{organization}. All rights reserved." if /^\/\/ {2}Copyright ©/ =~ line
-            line.gsub!(Regexp.new(Regexp.escape(template_name), Regexp::IGNORECASE), name)
-            line.gsub!(Regexp.new(Regexp.escape(template_organization), Regexp::IGNORECASE), organization)
-            line.gsub!(Regexp.new(Regexp.escape(template_author), Regexp::IGNORECASE), author)
+            line.gsub!(template_name, name)
+            # line.gsub!(Regexp.new(Regexp.escape(template_name), Regexp::IGNORECASE), name)
+            # line.gsub!(Regexp.new(Regexp.escape(template_organization), Regexp::IGNORECASE), organization)
+            # line.gsub!(Regexp.new(Regexp.escape(template_author), Regexp::IGNORECASE), author)
             file.puts line
           end
           origin.close

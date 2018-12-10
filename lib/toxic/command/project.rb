@@ -4,7 +4,7 @@ desc 'Project'
 command :project, :p do |c|
   c.desc 'template url'
   c.arg_name 'template-url'
-  c.default_value 'https://github.com/srv7/project-template.git'
+  c.default_value 'https://github.com/srv7/ios-template-project.git'
   c.flag :'template-url'
 
   c.desc 'create xcode project'
