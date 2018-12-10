@@ -99,8 +99,11 @@ module Toxic
           puts CLI::UI.fmt("{{green: initializing git}}")
           system "git init"
           system "git remote add origin #{repository_address}" unless repository_address.empty?
-          project = Dir.glob("./#{name}/**/**/#{name}.xcworkspace").first
-          project = Dir.glob("./#{name}/**/**/#{name}.xcodeproj") unless Dir.glob(project).any?
+          puts "repository_address: #{repository_address}"
+          project = Dir.glob("./**/**/#{name}.xcworkspace").first
+          puts "xcworkspace: #{project}"
+          project = Dir.glob("./**/**/#{name}.xcodeproj") unless Dir.glob(project).any?
+          puts "final: #{project}"
           system "open #{project}"
         end
       end
