@@ -33,7 +33,7 @@ module Toxic
         raise "A name for the project is required." unless name
         raise "The project name cannot contain spaces." if name =~ /\s/
         raise "The project name cannot begin with a '.'" if name[0, 1] == '.'
-        raise "" if name =~ /[^a-zA-Z0-9]/
+        raise "The project name should only contain number and character" if name =~ /[^a-zA-Z0-9]/
       end
 
       def clone_template
