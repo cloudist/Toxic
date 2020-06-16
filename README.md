@@ -4,7 +4,7 @@
 create xcode project from template
 
 ## Installation
-    $ gem install Toxic
+    $ gem install toxic
     
 ## Usage
 
